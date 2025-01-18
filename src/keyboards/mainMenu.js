@@ -32,7 +32,6 @@ class MainMenu {
         return Markup.keyboard([
             ["20,000đ", "50,000đ"],
             ["100,000đ", "200,000đ"],
-            ["500,000đ"],
             ["⬅️ Back"]
         ]).resize();
     }

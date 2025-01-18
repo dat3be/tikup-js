@@ -91,7 +91,7 @@ class ReferralController {
                           `• Nhận ngay ${this.getCommissionRate()}% từ giá trị nạp tiền\n` +
                           `• Không giới hạn số lượng giới thiệu\n` +
                           `• Rút tiền về tài khoản ngân hàng 24/7\n\n` +
-                          `💡 Gõ /referral để xem thông tin chi tiết và quản lý`;
+                          `💡 Vào 👫 Referral để xem thông tin chi tiết và quản lý`;
 
             await ctx.editMessageText(message);
 

@@ -62,10 +62,10 @@ class User {
             `;
             const result = await db.query(query, [userId]);
             
-            // Log kết quả để debug
-            if (result.rows[0]) {
-                Logger.info(`Found user ${userId} with referrer ${result.rows[0].referred_by}`);
-            }
+            // // Log kết quả để debug
+            // if (result.rows[0]) {
+            //     Logger.info(`Found user ${userId} with referrer ${result.rows[0].referred_by}`);
+            // }
             
             return result.rows[0];
         } catch (error) {

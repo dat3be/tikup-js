@@ -75,7 +75,8 @@ class PaymentService {
                             senderName: corresponsiveName,
                             senderAccount: corresponsiveAccount,
                             timestamp: when,
-                            status: 'Completed'
+                            status: 'Completed',
+                            type: 'deposit'
                         });
                     }
 

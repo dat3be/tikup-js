@@ -6,6 +6,13 @@ const MainMenu = require('../keyboards/mainMenu');
 const Logger = require('../utils/logger');
 
 class PaymentController {
+
+    static TRANSACTION_TYPES = {
+        DEPOSIT: 'deposit',
+        WITHDRAW: 'withdraw',
+        TRANSFER: 'transfer'
+    };
+
     static async handleDeposit(ctx) {
         try {
             const userId = ctx.from.id;
@@ -44,10 +51,6 @@ class PaymentController {
         try {
             const amount = parseInt(ctx.message.text.replace(/[^\d]/g, ''));
             const userId = ctx.from.id;
-            
-            if (![20000, 50000, 100000, 200000, 500000].includes(amount)) {
-                return ctx.reply('❌ Mệnh giá không hợp lệ');
-            }
 
             const qrCodeUrl = this.createQrCodeWithAmount(userId, amount);
             
@@ -81,7 +84,8 @@ class PaymentController {
                 amount,
                 status: 'Pending',
                 qrMessageId: qrMessage.message_id,
-                description: `TIKUP${userId}`
+                description: `TIKUP${userId}`,
+                type: 'deposit'
             });
 
             ctx.state.setState({ 
@@ -96,6 +100,14 @@ class PaymentController {
     }
 
     static async handleCancelPayment(ctx) {
+
+   Logger.info('Callback query details', {
+            data: ctx.callbackQuery.data,
+            messageId: ctx.callbackQuery.message.message_id,
+            chatId: ctx.callbackQuery.message.chat.id,
+        });
+       
+
         try {
             const state = ctx.state.getState();
             if (state?.qrMessageId) {
@@ -135,7 +147,8 @@ class PaymentController {
                     tid,
                     amount: parseFloat(amount),
                     description,
-                    userId
+                    userId,
+                    type: 'deposit'
                 });
 
                 if (transaction) {
@@ -152,6 +165,7 @@ class PaymentController {
     }
 
     static async handleCheckPayment(ctx) {
+
         try {
             const state = ctx.state.getState();
             const amount = state?.pendingAmount;
@@ -162,7 +176,7 @@ class PaymentController {
             }
 
             await ctx.answerCbQuery(
-                '⌛️ Hệ thống đang xử lý giao dịch...\n' +
+                '⌛️ Hệ thống đang xử lý...\n' +
                 'Vui lòng đợi 1-3 phút để tiền được cộng tự động.',
                 { show_alert: true }
             );

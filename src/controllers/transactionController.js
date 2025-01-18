@@ -11,8 +11,9 @@ class TransactionController {
                 user_id: userId,
                 amount: amount,
                 transaction_id: transactionId,
-                type: 'deposit',
-                status: 'completed'
+                description: `Deposit of ${amount}`,
+                status: 'completed',
+                type: 'deposit'
             });
 
             // 2. Cộng tiền cho user

@@ -92,8 +92,6 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-app.post('/webhook/payment', PaymentController.handleWebhook);
-
 // Handle callback queries
 bot.action('cancel_payment', PaymentController.handleCancelPayment);
 bot.action(/^check_payment_(\d+)$/, PaymentController.handleCheckPayment);

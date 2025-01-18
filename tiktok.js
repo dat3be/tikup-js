@@ -134,6 +134,7 @@ async function saveOrder(orderData) {
 }
 
 module.exports = {
+    userStates,
     handleTiktokFollowers: async (ctx) => {
         const userId = ctx.from.id;
         userStates.set(userId, initUserState(userId));
@@ -167,98 +168,98 @@ module.exports = {
         }
     },
 
-    // handleMessage: async (ctx) => {
-    //     try {
-    //         const userId = ctx.from.id;
-    //         const state = userStates.get(userId);
-    //
-    //         if (!state) {
-    //             await ctx.reply('❌ Vui lòng bắt đầu lại từ đầu bằng cách chọn "🛒 Order Now"');
-    //             return;
-    //         }
-    //
-    //         // Check session timeout (5 minutes)
-    //         if (Date.now() - state.startTime > 5 * 60 * 1000) {
-    //             userStates.delete(userId);
-    //             await ctx.reply('❌ Phiên làm việc đã hết hạn. Vui lòng bắt đầu lại.');
-    //             return;
-    //         }
-    //
-    //         switch (state.step) {
-    //             case 'LINK_INPUT':
-    //                 if (!isValidTikTokLink(ctx.message.text)) {
-    //                     await ctx.reply('❌ Link không hợp lệ. Vui lòng nhập lại link TikTok.');
-    //                     return;
-    //                 }
-    //                 state.link = ctx.message.text;
-    //                 state.step = 'QUANTITY_INPUT';
-    //                 await ctx.reply('🔢 Nhập số lượng follow muốn tăng:');
-    //                 break;
-    //
-    //             case 'QUANTITY_INPUT':
-    //                 const quantity = parseInt(ctx.message.text);
-    //                 if (isNaN(quantity) || quantity < 100 || quantity > 10000) {
-    //                     await ctx.reply('❌ Số lượng không hợp lệ. Vui lòng nhập số từ 100 đến 10,000.');
-    //                     return;
-    //                 }
-    //
-    //                 state.quantity = quantity;
-    //                 state.totalCost = quantity * SERVERS[state.serverId].cost;
-    //                 state.step = 'CONFIRMATION';
-    //
-    //                 const userBalance = await checkUserBalance(userId);
-    //                 if (userBalance < state.totalCost) {
-    //                     await ctx.reply(
-    //                         `❌ Số dư không đủ!\n\n` +
-    //                         `💰 Số dư hiện tại: ${userBalance.toLocaleString()}đ\n` +
-    //                         `💰 Số tiền cần: ${state.totalCost.toLocaleString()}đ\n` +
-    //                         `💰 Cần nạp thêm: ${(state.totalCost - userBalance).toLocaleString()}đ`
-    //                     );
-    //                     userStates.delete(userId);
-    //                     return;
-    //                 }
-    //
-    //                 const orderKey = `order_${userId}_${Date.now()}`;
-    //                 const orderData = {
-    //                     userId,
-    //                     serverId: state.serverId,
-    //                     link: state.link,
-    //                     quantity: state.quantity,
-    //                     totalCost: state.totalCost
-    //                 };
-    //
-    //                 // Lưu orderData vào temporary storage
-    //                 userStates.set(orderKey, orderData);
-    //
-    //                 await ctx.reply(
-    //                     `📋 CHI TIẾT ĐƠN HÀNG\n\n` +
-    //                     `🔗 Link TikTok:\n${state.link}\n\n` +
-    //                     `📊 THÔNG TIN:\n` +
-    //                     `├ Số lượng: ${state.quantity.toLocaleString()} follow\n` +
-    //                     `├ Máy chủ: ${SERVERS[state.serverId].name}\n` +
-    //                     `├ Đơn giá: ${SERVERS[state.serverId].cost.toLocaleString()}đ\n` +
-    //                     `└ Tổng tiền: ${state.totalCost.toLocaleString()}đ\n\n` +
-    //                     `💰 Số dư hiện tại: ${userBalance.toLocaleString()}đ\n` +
-    //                     `💰 Số dư còn lại: ${(userBalance - state.totalCost).toLocaleString()}đ\n\n` +
-    //                     `⚠️ LƯU Ý:\n` +
-    //                     `• Vui lòng kiểm tra kỹ link trước khi xác nhận\n` +
-    //                     `• Đơn đã tạo không thể hủy hoặc hoàn tiền\n` +
-    //                     `• Thời gian hoàn thành từ 1-24h tùy số lượng`,
-    //                     Markup.inlineKeyboard([
-    //                         [
-    //                             Markup.button.callback('✅ Xác nhận', `confirm_${orderKey}`),
-    //                             Markup.button.callback('❌ Huỷ', `cancel_${orderKey}`)
-    //                         ]
-    //                     ])
-    //                 );
-    //                 break;
-    //         }
-    //     } catch (error) {
-    //         console.error('Message handling error:', error);
-    //         await ctx.reply('❌ Đã xảy ra lỗi. Vui lòng thử lại.');
-    //         userStates.delete(ctx.from.id);
-    //     }
-    // },
+    handleOrderMessage: async (ctx) => {
+        try {
+            const userId = ctx.from.id;
+            const state = userStates.get(userId);
+    
+            if (!state) {
+                await ctx.reply('❌ Vui lòng bắt đầu lại từ đầu bằng cách chọn "🛒 Order Now"');
+                return;
+            }
+    
+            // Check session timeout (5 minutes)
+            if (Date.now() - state.startTime > 5 * 60 * 1000) {
+                userStates.delete(userId);
+                await ctx.reply('❌ Phiên làm việc đã hết hạn. Vui lòng bắt đầu lại.');
+                return;
+            }
+    
+            switch (state.step) {
+                case 'LINK_INPUT':
+                    if (!isValidTikTokLink(ctx.message.text)) {
+                        await ctx.reply('❌ Link không hợp lệ. Vui lòng nhập lại link TikTok.');
+                        return;
+                    }
+                    state.link = ctx.message.text;
+                    state.step = 'QUANTITY_INPUT';
+                    await ctx.reply('🔢 Nhập số lượng follow muốn tăng:');
+                    break;
+    
+                case 'QUANTITY_INPUT':
+                    const quantity = parseInt(ctx.message.text);
+                    if (isNaN(quantity) || quantity < 100 || quantity > 10000) {
+                        await ctx.reply('❌ Số lượng không hợp lệ. Vui lòng nhập số từ 100 đến 10,000.');
+                        return;
+                    }
+    
+                    state.quantity = quantity;
+                    state.totalCost = quantity * SERVERS[state.serverId].cost;
+                    state.step = 'CONFIRMATION';
+    
+                    const userBalance = await checkUserBalance(userId);
+                    if (userBalance < state.totalCost) {
+                        await ctx.reply(
+                            `❌ Số dư không đủ!\n\n` +
+                            `💰 Số dư hiện tại: ${userBalance.toLocaleString()}đ\n` +
+                            `💰 Số tiền cần: ${state.totalCost.toLocaleString()}đ\n` +
+                            `💰 Cần nạp thêm: ${(state.totalCost - userBalance).toLocaleString()}đ`
+                        );
+                        userStates.delete(userId);
+                        return;
+                    }
+    
+                    const orderKey = `order_${userId}_${Date.now()}`;
+                    const orderData = {
+                        userId,
+                        serverId: state.serverId,
+                        link: state.link,
+                        quantity: state.quantity,
+                        totalCost: state.totalCost
+                    };
+    
+                    // Lưu orderData vào temporary storage
+                    userStates.set(orderKey, orderData);
+    
+                    await ctx.reply(
+                        `📋 CHI TIẾT ĐƠN HÀNG\n\n` +
+                        `🔗 Link TikTok:\n${state.link}\n\n` +
+                        `📊 THÔNG TIN:\n` +
+                        `├ Số lượng: ${state.quantity.toLocaleString()} follow\n` +
+                        `├ Máy chủ: ${SERVERS[state.serverId].name}\n` +
+                        `├ Đơn giá: ${SERVERS[state.serverId].cost.toLocaleString()}đ\n` +
+                        `└ Tổng tiền: ${state.totalCost.toLocaleString()}đ\n\n` +
+                        `💰 Số dư hiện tại: ${userBalance.toLocaleString()}đ\n` +
+                        `💰 Số dư còn lại: ${(userBalance - state.totalCost).toLocaleString()}đ\n\n` +
+                        `⚠️ LƯU Ý:\n` +
+                        `• Vui lòng kiểm tra kỹ link trước khi xác nhận\n` +
+                        `• Đơn đã tạo không thể hủy hoặc hoàn tiền\n` +
+                        `• Thời gian hoàn thành từ 1-24h tùy số lượng`,
+                        Markup.inlineKeyboard([
+                            [
+                                Markup.button.callback('✅ Xác nhận', `confirm_${orderKey}`),
+                                Markup.button.callback('❌ Huỷ', `cancel_${orderKey}`)
+                            ]
+                        ])
+                    );
+                    break;
+            }
+        } catch (error) {
+            console.error('Message handling error:', error);
+            await ctx.reply('❌ Đã xảy ra lỗi. Vui lòng thử lại.');
+            userStates.delete(ctx.from.id);
+        }
+    },
 
     handleOrderButtons: async (ctx) => {
         try {

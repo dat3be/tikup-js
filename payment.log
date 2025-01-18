@@ -9,3 +9,9 @@
 {"level":"info","message":"Table initialized:","timestamp":"2025-01-13T15:43:43.781Z"}
 {"level":"info","message":"Table initialized:","timestamp":"2025-01-13T15:43:43.781Z"}
 {"amount":599000,"bankAbbreviation":"VPB","bankName":"VPBank","bank_sub_acc_id":"88888888","corresponsiveAccount":"8888888888","corresponsiveBankId":"970415","corresponsiveBankName":"VietinBank","corresponsiveName":"NGUYEN VAN A","cusum_balance":25000000,"description":"giao dich thu nghiem","id":0,"level":"warn","message":"Invalid transaction data:","subAccId":"88888888","tid":"MA_GIAO_DICH_THU_NGHIEM","timestamp":"2025-01-13T15:45:56.662Z","virtualAccount":"","virtualAccountName":"","when":"2025-01-13 22:45:56"}
+{"level":"info","message":"Payment service running on port 3333","timestamp":"2025-01-16T01:00:59.425Z"}
+{"level":"info","message":"Table initialized:","timestamp":"2025-01-16T01:00:59.437Z"}
+{"level":"info","message":"Table initialized:","timestamp":"2025-01-16T01:00:59.438Z"}
+{"level":"info","message":"Payment service running on port 3333","timestamp":"2025-01-17T01:24:35.340Z"}
+{"level":"info","message":"Table initialized:","timestamp":"2025-01-17T01:24:35.354Z"}
+{"level":"info","message":"Table initialized:","timestamp":"2025-01-17T01:24:35.354Z"}

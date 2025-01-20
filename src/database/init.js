@@ -11,7 +11,7 @@ const initDatabase = async () => {
                 username VARCHAR(255),
                 balance DECIMAL(15,2) DEFAULT 0,
                 rank VARCHAR(50) DEFAULT 'Bronze',
-                referred_by VARCHAR(10),
+                referred_by VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -21,7 +21,7 @@ const initDatabase = async () => {
         await db.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
-                user_id VARCHAR(255) NOT NULL,
+                user_id VARCHAR(255) NULL,
                 tid VARCHAR(100),
                 type VARCHAR(50) NULL,
                 amount DECIMAL(15,2) NOT NULL,
@@ -29,10 +29,6 @@ const initDatabase = async () => {
                 payment_method VARCHAR(50),
                 bank_name VARCHAR(100),
                 bank_account VARCHAR(50),
-                bank_number VARCHAR(50),
-                sender_name VARCHAR(255),
-                sender_account VARCHAR(50),
-                transaction_id VARCHAR(100),
                 message_id VARCHAR(100),
                 description TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -47,16 +43,15 @@ const initDatabase = async () => {
             CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
                 user_id VARCHAR(255) NOT NULL,
-                amount DECIMAL(15,2) NOT NULL,
-                type VARCHAR(50) NOT NULL,
-                status VARCHAR(50) DEFAULT 'pending',
-                description TEXT,
-                message_id VARCHAR(100),
-                transaction_id VARCHAR(100),
-                tid VARCHAR(100),
-                bank_name VARCHAR(100),
-                sender_name VARCHAR(255),
-                sender_account VARCHAR(50),
+                api_order_id VARCHAR(100),
+                service_type VARCHAR(100),
+                link TEXT,
+                quantity INTEGER,
+                server VARCHAR(50),
+                total_cost DECIMAL(15,2),
+                status VARCHAR(50) DEFAULT 'Pending',
+                start_count INTEGER DEFAULT 0,
+                remains INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -152,4 +147,4 @@ const initDatabase = async () => {
     }
 };
 
-module.exports = initDatabase; 
+module.exports = initDatabase;

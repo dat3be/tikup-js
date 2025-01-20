@@ -36,7 +36,7 @@ class OrderService {
                 quantity,
                 server,
                 totalCost,
-                status: 'Pending'
+                status: 'pending'
             });
 
             // Deduct user balance

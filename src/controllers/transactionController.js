@@ -1,54 +1,84 @@
 const Transaction = require('../models/transaction');
-const Commission = require('../models/commission');
 const User = require('../models/user');
 const Logger = require('../utils/logger');
+const bot = require('../config/telegram');
+const { formatNumber } = require('../utils/helper');
 
 class TransactionController {
-    static async handleDeposit(userId, amount, transactionId) {
+    static async handleDeposit(userId, amount, tid, bankInfo = {}) {
         try {
-            // 1. Tạo transaction record
-            const transaction = await Transaction.create({
-                user_id: userId,
-                amount: amount,
-                transaction_id: transactionId,
-                description: `Deposit of ${amount}`,
-                status: 'completed',
-                type: 'deposit'
-            });
-
-            // 2. Cộng tiền cho user
-            await User.updateBalance(userId, amount);
-
-            // 3. Xử lý hoa hồng nếu user được giới thiệu
-            const user = await User.findById(userId);
-            if (user.referred_by) {
-                // Lấy thông tin người giới thiệu
-                const referrer = await User.getRankInfo(user.referred_by);
-                
-                // Tính hoa hồng dựa trên rank
-                const commissionAmount = (amount * referrer.commission_rate) / 100;
-                
-                if (commissionAmount > 0) {
-                    // Tạo commission record
-                    await Commission.create({
-                        user_id: user.referred_by, // Người nhận hoa hồng
-                        referral_id: userId, // Người được giới thiệu
-                        transaction_id: transaction.id,
-                        amount: amount, // Số tiền gốc
-                        commission_amount: commissionAmount // Số tiền hoa hồng
-                    });
-
-                    // Cộng tiền hoa hồng cho người giới thiệu
-                    await User.updateBalance(user.referred_by, commissionAmount);
-
-                    Logger.info(`Commission ${commissionAmount}đ paid to ${user.referred_by} from ${userId}'s deposit`);
-                }
+            // Kiểm tra giao dịch đã tồn tại
+            const existingTransaction = await Transaction.findByTid(tid);
+            if (existingTransaction) {
+                Logger.warn('Duplicate transaction:', { tid });
+                return { success: false, message: 'Duplicate transaction' };
             }
 
-            return transaction;
+            // Tìm giao dịch pending của user với số tiền tương ứng
+            const pendingTransaction = await Transaction.findPendingDeposit(userId, amount);
+            
+            // Cập nhật số dư user
+            const user = await User.updateBalance(userId, amount);
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            // Nếu tìm thấy giao dịch pending, cập nhật message cũ
+            if (pendingTransaction?.message_id) {
+                try {
+                    await bot.telegram.editMessageCaption(
+                        userId,
+                        pendingTransaction.message_id,
+                        null,
+                        `✅ <b>THANH TOÁN THÀNH CÔNG</b>\n\n` +
+                        `💰 Số tiền: <b>${formatNumber(amount)}đ</b>\n` +
+                        `🏦 Ngân hàng: <b>${bankInfo.bank_name || BANK_INFO.name}</b>\n` +
+                        `💳 STK: <b>${bankInfo.bank_account || BANK_INFO.account}</b>\n` +
+                        `🔖 Mã GD: <code>${tid}</code>\n` +
+                        `⏱ Thời gian: ${new Date().toLocaleString('vi-VN')}\n\n` +
+                        `💵 Số dư hiện tại: <b>${formatNumber(user.balance)}đ</b>`,
+                    );
+
+                    // Cập nhật trạng thái transaction
+                    await Transaction.update(pendingTransaction.id, {
+                        status: 'completed',
+                        tid: tid,
+                        bank_name: bankInfo.bank_name,
+                        bank_account: bankInfo.bank_account,
+                        updated_at: new Date()
+                    });
+
+                    Logger.info('Updated transaction message', {
+                        userId,
+                        transactionId: pendingTransaction.id,
+                        messageId: pendingTransaction.message_id
+                    });
+                } catch (editError) {
+                    Logger.error('Error updating transaction message:', editError);
+                    // Không throw error vì giao dịch vẫn thành công
+                }
+            } else {
+                // Nếu không tìm thấy giao dịch pending, tạo mới
+                await Transaction.create({
+                    user_id: userId,
+                    amount: amount,
+                    type: 'deposit',
+                    status: 'completed',
+                    tid: tid,
+                    bank_name: bankInfo.bank_name,
+                    bank_account: bankInfo.bank_account,
+                    description: `TIKUP${userId}`
+                });
+            }
+
+            return {
+                success: true,
+                transaction: pendingTransaction,
+                user
+            };
 
         } catch (error) {
-            Logger.error('Deposit handler error:', error);
+            Logger.error('Error handling deposit:', error);
             throw error;
         }
     }

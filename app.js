@@ -17,6 +17,7 @@ const StateManager = require('./src/middlewares/state');
 // Import Services
 const OrderService = require('./src/services/orderService');
 const MainMenu = require('./src/keyboards/mainMenu');
+const SchedulerService = require('./src/services/schedulerService');
 
 // Initialize database
 initDatabase().catch(error => {
@@ -146,6 +147,9 @@ const start = async () => {
         // Enable graceful stop
         process.once('SIGINT', () => bot.stop('SIGINT'));
         process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+        // Khởi động scheduler
+        SchedulerService.start();
     } catch (error) {
         Logger.error('Startup error:', error);
         process.exit(1);

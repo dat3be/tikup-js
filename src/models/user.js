@@ -3,10 +3,8 @@ const Logger = require('../utils/logger');
 const Affiliate = require('./affiliate');
 
 class User {
-    static async create(userId, username, referredBy = null) {
+    static async create(user_id, username, referred_by = null) {
         try {
-            Logger.info(`Creating/updating user: ${userId}, ${username}, referred by: ${referredBy}`);
-
             const query = `
                 INSERT INTO users 
                 (user_id, username, referred_by, rank, balance)
@@ -18,17 +16,18 @@ class User {
                 RETURNING *
             `;
             
-            const values = [
-                userId.toString(),
-                username || 'Unknown',
-                referredBy
-            ];
-
+            const values = [user_id, username || 'Unknown', referred_by];
             const result = await db.query(query, values);
-            Logger.info(`User create/update result:`, result.rows[0]);
+
+            Logger.info('User created/updated:', {
+                user_id,
+                username,
+                referred_by: result.rows[0].referred_by
+            });
+
             return result.rows[0];
         } catch (error) {
-            Logger.error('Error creating user:', error);
+            Logger.error('Error creating/updating user:', error);
             throw error;
         }
     }
@@ -50,23 +49,18 @@ class User {
         }
     }
 
-    static async findById(userId) {
+    static async findById(user_id) {
         try {
             const query = `
-                SELECT 
-                    u.*,
-                    ref.username as referrer_username
+                SELECT u.*,
+                       a.username as referrer_username,
+                       a.user_id as referrer_id
                 FROM users u
-                LEFT JOIN users ref ON u.referred_by = ref.user_id
+                LEFT JOIN affiliates af ON u.referred_by = af.aff_code
+                LEFT JOIN users a ON af.user_id = a.user_id
                 WHERE u.user_id = $1
             `;
-            const result = await db.query(query, [userId]);
-            
-            // // Log kết quả để debug
-            // if (result.rows[0]) {
-            //     Logger.info(`Found user ${userId} with referrer ${result.rows[0].referred_by}`);
-            // }
-            
+            const result = await db.query(query, [user_id]);
             return result.rows[0];
         } catch (error) {
             Logger.error('Error finding user:', error);
@@ -157,6 +151,75 @@ class User {
             return newRank?.name;
         } catch (error) {
             Logger.error('Error updating rank:', error);
+            throw error;
+        }
+    }
+
+    static async getReferralInfo(user_id) {
+        try {
+            const query = `
+                WITH user_affiliate AS (
+                    SELECT aff_code 
+                    FROM affiliates 
+                    WHERE user_id = $1
+                )
+                SELECT 
+                    COUNT(DISTINCT u.user_id) as total_referrals,
+                    COALESCE(SUM(t.amount), 0) as total_referral_amount,
+                    COALESCE(SUM(c.commission_amount), 0) as total_commission
+                FROM user_affiliate ua
+                LEFT JOIN users u ON u.referred_by = ua.aff_code
+                LEFT JOIN transactions t ON t.user_id = u.user_id AND t.status = 'completed'
+                LEFT JOIN commissions c ON c.user_id = $1
+            `;
+            
+            const result = await db.query(query, [user_id]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Error getting referral info:', error);
+            throw error;
+        }
+    }
+
+    static async findByAffCode(aff_code) {
+        try {
+            const query = `
+                SELECT u.* 
+                FROM users u
+                JOIN affiliates a ON u.user_id = a.user_id
+                WHERE a.aff_code = $1
+            `;
+            const result = await db.query(query, [aff_code]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Error finding user by aff code:', error);
+            throw error;
+        }
+    }
+
+    static async update(user_id, data) {
+        try {
+            const query = `
+                UPDATE users 
+                SET 
+                    referred_by = COALESCE($1, referred_by),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $2
+                RETURNING *
+            `;
+            
+            const values = [data.referred_by, user_id];
+            const result = await db.query(query, values);
+
+            Logger.info('User updated:', {
+                user_id,
+                updates: data,
+                result: result.rows[0]
+            });
+
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Error updating user:', error);
             throw error;
         }
     }

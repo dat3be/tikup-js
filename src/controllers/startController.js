@@ -1,78 +1,93 @@
 const User = require('../models/user');
-const Affiliate = require('../models/affiliate');
 const Logger = require('../utils/logger');
 const MainMenu = require('../keyboards/mainMenu');
 
 class StartController {
     static async handleStart(ctx) {
         try {
-            const userId = ctx.from.id.toString();
+            const user_id = ctx.from.id.toString();
             const username = ctx.from.username;
-            let referredBy = null;
+            
+            // Parse referred_by từ command text: /start QAZ0MH
+            const commandText = ctx.message?.text || '';
+            const parts = commandText.split(' ');
+            const referred_by = parts.length > 1 ? parts[1] : null;
 
-            // Log start command và parameters
-            Logger.info(`Start command received from user ${userId} (${username})`);
-            Logger.info(`Full message text: ${ctx.message.text}`);
-            Logger.info(`Start payload: ${ctx.startPayload}`);
+            Logger.info('Start command received:', {
+                user_id,
+                username,
+                command_text: commandText,
+                parsed_referred_by: referred_by
+            });
 
-            // Kiểm tra start parameter (mã giới thiệu)
-            const startParam = ctx.startPayload;
-            if (startParam) {
-                Logger.info(`Processing referral code: ${startParam}`);
-                const affiliate = await Affiliate.findByAffCode(startParam);
-                
-                if (affiliate) {
-                    Logger.info(`Found affiliate for code ${startParam}:`, affiliate);
-                    if (affiliate.user_id !== userId) {
-                        referredBy = startParam;
-                        Logger.info(`User ${userId} was referred by ${affiliate.user_id} with code ${referredBy}`);
-                    } else {
-                        Logger.warn(`User ${userId} tried to use their own referral code`);
-                    }
-                } else {
-                    Logger.warn(`No affiliate found for code: ${startParam}`);
-                }
-            }
+            // Kiểm tra user đã tồn tại chưa
+            const existingUser = await User.findById(user_id);
+            
+            // Nếu là user đã tồn tại và chưa có referred_by
+            if (existingUser && !existingUser.referred_by && referred_by) {
+                Logger.info('Updating existing user with referral:', {
+                    user_id,
+                    username,
+                    referred_by
+                });
 
-            // Kiểm tra xem user đã tồn tại và đã có người giới thiệu chưa
-            const existingUser = await User.findById(userId);
-            if (existingUser && existingUser.referred_by) {
-                Logger.info(`User ${userId} already exists with referrer: ${existingUser.referred_by}`);
-                await ctx.reply('Chào mừng quay trở lại!', MainMenu.getMainMenuKeyboard());
+                // Cập nhật referred_by cho user
+                const updatedUser = await User.update(user_id, {
+                    referred_by: referred_by
+                });
+
+                Logger.info('User updated with referral:', {
+                    user_id: updatedUser.user_id,
+                    username: updatedUser.username,
+                    referred_by: updatedUser.referred_by
+                });
+
+                const message = `👋 Chào mừng @${username}!\n\n` +
+                              `✅ Bạn được giới thiệu bởi mã: ${referred_by}\n\n` +
+                              `💡 Vui lòng sử dụng menu để truy cập các tính năng.`;
+
+                await ctx.reply(message, MainMenu.getMainMenuKeyboard());
                 return;
             }
 
-            // Tạo hoặc cập nhật user
-            const user = await User.create(userId, username, referredBy);
-            Logger.info(`User created/updated:`, user);
+            // User đã tồn tại và đã có referred_by
+            if (existingUser?.referred_by) {
+                Logger.info('User already has referral:', {
+                    user_id,
+                    username,
+                    current_referred_by: existingUser.referred_by
+                });
 
-            // Tin nhắn chào mừng
-            let message = `👋 Chào mừng @${username} đến với dịch vụ của chúng tôi!\n\n`;
-            if (user.referred_by) {
-                const referrer = await Affiliate.findByAffCode(user.referred_by);
-                if (referrer) {
-                    const referrerUser = await User.findById(referrer.user_id);
-                    message += `🎉 Bạn đã được giới thiệu bởi: @${referrerUser.username}\n\n`;
-                }
+                const message = `👋 Chào mừng quay lại, @${username}!\n\n` +
+                              `💡 Vui lòng sử dụng menu để truy cập các tính năng.`;
+
+                await ctx.reply(message, MainMenu.getMainMenuKeyboard());
+                return;
             }
-            message += `💡 Vui lòng sử dụng menu để truy cập các tính năng.`;
+
+            // User mới
+            const user = await User.create(user_id, username, referred_by);
+            Logger.info('New user created:', {
+                user_id: user.user_id,
+                username: user.username,
+                referred_by: user.referred_by
+            });
+
+            const message = `👋 Chào mừng @${username}!\n\n` +
+                          (referred_by ? `✅ Bạn được giới thiệu bởi mã: ${referred_by}\n\n` : '') +
+                          `💡 Vui lòng sử dụng menu để truy cập các tính năng.`;
 
             await ctx.reply(message, MainMenu.getMainMenuKeyboard());
 
-            // Cập nhật rank cho người giới thiệu
-            if (referredBy) {
-                const referrer = await Affiliate.findByAffCode(referredBy);
-                if (referrer) {
-                    await User.updateRank(referrer.user_id);
-                    Logger.info(`Updated rank for referrer ${referrer.user_id}`);
-                }
-            }
-
         } catch (error) {
-            Logger.error('Start handler error:', error);
+            Logger.error('Start handler error:', {
+                error: error.message,
+                user_id: ctx.from?.id,
+                command: ctx.message?.text
+            });
             await ctx.reply('❌ Có lỗi xảy ra. Vui lòng thử lại sau.');
         }
     }
 }
 
-module.exports = StartController; module.exports = StartController; 
+module.exports = StartController; 

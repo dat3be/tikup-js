@@ -4,6 +4,7 @@ const Logger = require('./src/utils/logger');
 const initDatabase = require('./src/database/init');
 
 // Import Controllers
+const StartController = require('./src/controllers/startController');
 const UserController = require('./src/controllers/userController');
 const OrderController = require('./src/controllers/orderController');
 const PaymentController = require('./src/controllers/paymentController');
@@ -31,7 +32,7 @@ bot.use(RateLimiter.middleware());
 bot.use(StateManager.middleware());
 
 // Command handlers
-bot.command('start', UserController.handleStart);
+bot.command('start', StartController.handleStart);
 bot.command('help', ctx => ctx.reply(
     '📌 Danh sách lệnh:\n' +
     '/start - Khởi động bot\n' +

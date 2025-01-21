@@ -83,8 +83,8 @@ const initDatabase = async () => {
                 user_id VARCHAR(255) NOT NULL,
                 referral_id VARCHAR(255) NOT NULL,
                 transaction_id VARCHAR(50) NOT NULL,
-                amount DECIMAL(15,2) NOT NULL,
-                commission_amount DECIMAL(15,2) NOT NULL,
+                amount DECIMAL(15,2) NULL,
+                commission_amount DECIMAL(15,2) NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES affiliates(user_id),
                 FOREIGN KEY (referral_id) REFERENCES users(user_id)

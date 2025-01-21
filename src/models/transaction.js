@@ -77,29 +77,45 @@ class Transaction {
         }
     }
 
-    static async update(id, updateData) {
+    static async update(id, data) {
         try {
-            const setClauses = [];
-            const values = [id];
-            let paramIndex = 2;
-
-            Object.entries(updateData).forEach(([key, value]) => {
-                setClauses.push(`${key} = $${paramIndex}`);
-                values.push(value);
-                paramIndex++;
-            });
-
             const query = `
                 UPDATE transactions 
-                SET ${setClauses.join(', ')}
-                WHERE id = $1
+                SET 
+                    status = $1,
+                    tid = $2,
+                    bank_name = $3,
+                    bank_account = $4,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $5
                 RETURNING *
             `;
+
+            const values = [
+                data.status,
+                data.tid,
+                data.bank_info?.bank_name || null,
+                data.bank_info?.bank_account || null,
+                id
+            ];
+
+            Logger.info('Updating transaction:', {
+                id,
+                status: data.status,
+                tid: data.tid,
+                bank_name: data.bank_info?.bank_name,
+                bank_account: data.bank_info?.bank_account
+            });
 
             const result = await db.query(query, values);
             return result.rows[0];
         } catch (error) {
-            Logger.error('Error updating transaction:', error);
+            Logger.error('Error updating transaction:', {
+                error: error.message,
+                id,
+                data,
+                stack: error.stack
+            });
             throw error;
         }
     }
@@ -134,6 +150,45 @@ class Transaction {
             return result.rows;
         } catch (error) {
             Logger.error('Error getting pending transactions:', error);
+            throw error;
+        }
+    }
+
+    static async findPending(user_id, amount) {
+        try {
+            const query = `
+                SELECT * FROM transactions 
+                WHERE user_id = $1 
+                AND amount = $2 
+                AND status = 'pending'
+                AND created_at >= NOW() - INTERVAL '30 minutes'
+                ORDER BY created_at DESC 
+                LIMIT 1
+            `;
+            
+            Logger.info('Finding pending transaction:', {
+                user_id,
+                amount,
+                query
+            });
+
+            const result = await db.query(query, [user_id, amount]);
+            
+            Logger.info('Pending transaction search result:', {
+                user_id,
+                amount,
+                found: result.rows.length > 0,
+                transaction: result.rows[0]
+            });
+
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Error finding pending transaction:', {
+                error: error.message,
+                user_id,
+                amount,
+                stack: error.stack
+            });
             throw error;
         }
     }

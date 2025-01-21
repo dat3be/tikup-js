@@ -65,6 +65,7 @@ const initDatabase = async () => {
                 user_id VARCHAR(255) UNIQUE NOT NULL,
                 aff_code VARCHAR(10) UNIQUE NOT NULL,
                 aff_link VARCHAR(255) NOT NULL,
+                rank VARCHAR(20) DEFAULT 'Bronze',
                 commission DECIMAL(15,2) DEFAULT 0,
                 total_commission DECIMAL(15,2) DEFAULT 0,
                 total_referrals INTEGER DEFAULT 0,
@@ -146,5 +147,4 @@ const initDatabase = async () => {
         throw error;
     }
 };
-
 module.exports = initDatabase;

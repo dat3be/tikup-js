@@ -96,6 +96,35 @@ class UserController {
             await ctx.reply('❌ Có lỗi xảy ra. Vui lòng thử lại sau.');
         }
     }
+
+    static async handleReferral(ctx) {
+        try {
+            const userId = ctx.from.id;
+            const user = await User.findById(userId);
+
+            if (!user) {
+                return ctx.reply('❌ Không tìm thấy thông tin tài khoản.');
+            }
+
+            const aff_code = ctx.message.text.split(' ')[1];
+
+            if (aff_code) {
+                const affiliate = await Affiliate.findByAffCode(aff_code);
+                if (affiliate) {
+                    // Cập nhật referred_by cho user
+                    await User.update(user.id, { referred_by: aff_code });
+                    
+                    // Cập nhật rank cho affiliate
+                    await Affiliate.updateRank(affiliate.id);
+                }
+            }
+
+            await ctx.reply('🎉 Cảm ơn bạn đã tham gia chương trình giới thiệu!');
+        } catch (error) {
+            console.error('Referral handler error:', error);
+            await ctx.reply('❌ Có lỗi xảy ra khi xử lý thông tin giới thiệu.');
+        }
+    }
 }
 
 module.exports = UserController; 

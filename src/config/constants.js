@@ -1,5 +1,33 @@
 require('dotenv').config();
 
+const AFFILIATE_RANKS = {
+    BRONZE: {
+        name: 'Bronze',
+        required_referrals: 0,
+        commission_rate: 0.03
+    },
+    SILVER: {
+        name: 'Silver', 
+        required_referrals: 10,
+        commission_rate: 0.05
+    },
+    GOLD: {
+        name: 'Gold',
+        required_referrals: 30,
+        commission_rate: 0.07
+    },
+    PLATINUM: {
+        name: 'Platinum',
+        required_referrals: 100,
+        commission_rate: 0.10
+    },
+    DIAMOND: {
+        name: 'Diamond',
+        required_referrals: 1000,
+        commission_rate: 0.15
+    }
+};
+
 module.exports = {
     // Bot Configuration
     BOT_TOKEN: process.env.BOT_TOKEN,
@@ -33,5 +61,7 @@ module.exports = {
         'Refunded': 'Hoàn tiền',
         'Waiting Cancel': 'Chờ hủy',
         'Pending': 'Chờ xử lý'
-    }
+    },
+
+    AFFILIATE_RANKS
 }; 

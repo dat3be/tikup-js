@@ -42,22 +42,25 @@ const initDatabase = async () => {
         await db.query(`
             CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
-                user_id VARCHAR(255) NOT NULL,
-                api_order_id VARCHAR(100),
-                service_type VARCHAR(100),
-                link TEXT,
-                quantity INTEGER,
-                server VARCHAR(50),
-                total_cost DECIMAL(15,2),
-                status VARCHAR(50) DEFAULT 'Pending',
-                start_count INTEGER DEFAULT 0,
-                remains INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(user_id)
-            )
+                user_id BIGINT NOT NULL,
+                api_order_id VARCHAR(50) NOT NULL UNIQUE,
+                service_name VARCHAR(100) NOT NULL,
+                link VARCHAR(255) NOT NULL,
+                quantity INTEGER NOT NULL,
+                price_per_unit INTEGER NOT NULL,
+                total_price INTEGER NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+            
+            CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+            CREATE INDEX IF NOT EXISTS idx_orders_api_order_id ON orders(api_order_id);
+            CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+            CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
         `);
-
+        
         // Create affiliates table
         await db.query(`
             CREATE TABLE IF NOT EXISTS affiliates (

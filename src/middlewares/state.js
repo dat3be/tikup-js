@@ -1,3 +1,4 @@
+const Logger = require('../utils/logger');
 class StateManager {
     constructor() {
         this.states = new Map();
@@ -42,6 +43,24 @@ class StateManager {
         if (this.timeouts.has(userId)) {
             clearTimeout(this.timeouts.get(userId));
             this.timeouts.delete(userId);
+        }
+    }
+
+    clearAllStates() {
+        try {
+            // Clear all states
+            this.states.clear();
+            
+            // Clear all timeouts
+            for (const [userId, timeoutId] of this.timeouts) {
+                clearTimeout(timeoutId);
+            }
+            this.timeouts.clear();
+
+            Logger.info('Cleared all states');
+        } catch (error) {
+            Logger.error('Clear all states error:', error);
+            throw error;
         }
     }
 }

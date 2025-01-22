@@ -33,24 +33,42 @@ bot.use(StateManager.middleware());
 
 // Command handlers
 bot.command('start', StartController.handleStart);
-bot.command('help', ctx => ctx.reply(
-    '📌 Danh sách lệnh:\n' +
-    '/start - Khởi động bot\n' +
-    '/help - Xem trợ giúp\n' +
-    '🔍 Track - Kiểm tra đơn hàng\n' +
-    '💸 Deposit - Nạp tiền\n' +
-    '🛒 Order - Đặt đơn mới'
-));
 
 // Menu handlers
 bot.hears('👤 Account', UserController.handleAccount);
 bot.hears('👫 Referral', ReferralController.handleReferral);
 bot.hears('💸 Deposit Now', AuthMiddleware.requireAuth, PaymentController.handleDeposit);
 bot.hears('🔍 Track', AuthMiddleware.requireAuth, (ctx) => {
-    ctx.state.setState({ isTracking: true });
+    ctx.state.setState({ type: 'tracking', step: 'waiting_order_id' });
     ctx.reply('🔍 Vui lòng nhập mã đơn hàng cần kiểm tra:');
 });
-bot.hears('🛒 Order Now', AuthMiddleware.requireAuth, OrderController.handleOrderStart);
+
+// Order System
+bot.hears('🛒 Order Now', AuthMiddleware.requireAuth, async (ctx) => {
+    ctx.state.setState({ type: 'order', step: 'selecting_service' });
+    await OrderController.handleOrderStart(ctx);
+});
+
+// Text handler for ordering and tracking
+bot.on('text', async (ctx, next) => {
+    const state = ctx.state.getState();
+    
+    // Handle order flow
+    if (state?.type === 'order') {
+        await OrderController.handleText(ctx);
+        return;
+    }
+    
+    // Handle tracking flow
+    if (state?.type === 'tracking' || state?.isTracking) {
+        await OrderController.handleTracking(ctx);
+        return;
+    }
+    
+    return next();
+});
+
+// My Bag
 bot.hears('🎒 My Bag', AuthMiddleware.requireAuth, UserController.handleBag);
 
 // Handle More button
@@ -63,24 +81,8 @@ bot.hears('⬅️ Back', (ctx) => {
     ctx.reply('Chọn chức năng từ menu:', MainMenu.getMainMenuKeyboard());
 });
 
-// Text handler for tracking
-bot.on('text', async (ctx, next) => {
-    const state = ctx.state.getState();
-    if (state?.isTracking) {
-        await OrderController.handleTracking(ctx);
-        ctx.state.clearState();
-        return;
-    }
-    return next();
-});
-
 // Handle deposit amount selection
 bot.on('text', async (ctx, next) => {
-    // Ignore back button as it's handled above
-    if (ctx.message.text === '⬅️ Back') {
-        return;
-    }
-
     const state = ctx.state.getState();
     if (state?.isSelectingAmount) {
         await PaymentController.handleAmountSelection(ctx);
@@ -114,12 +116,25 @@ bot.action('cancel_referral', async (ctx) => {
     await ctx.editMessageText('❌ Đã hủy tham gia chương trình giới thiệu.');
 });
 
-// Handle bank info input
-bot.on('text', async (ctx) => {
-    if (ctx.session?.awaitingBankInfo) {
-        await ReferralController.handleBankInfo(ctx);
+// Admin commands
+bot.command('restart', AuthMiddleware.requireAdmin, async (ctx) => {
+    try {
+        await ctx.reply('🔄 Đang khởi động lại bot...');
+        
+        // Clear all states
+        StateManager.clearAllStates();
+    
+        await ctx.reply('✅ Bot đã được khởi động lại thành công!');
+        
+        Logger.info('Bot restarted by admin:', {
+            admin_id: ctx.from.id,
+            timestamp: new Date()
+        });
+
+    } catch (error) {
+        Logger.error('Restart error:', error);
+        await ctx.reply('❌ Có lỗi xảy ra khi khởi động lại bot.');
     }
-    // ... other text handlers ...
 });
 
 // Start bot and server

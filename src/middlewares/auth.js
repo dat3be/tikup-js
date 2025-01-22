@@ -31,6 +31,23 @@ class AuthMiddleware {
         }
         return next();
     }
+
+    static isAdmin(ctx) {
+        try {
+            const adminIds = process.env.ADMIN_IDS?.split(',').map(id => parseInt(id));
+            return adminIds?.includes(ctx.from.id);
+        } catch (error) {
+            Logger.error('Admin check error:', error);
+            return false;
+        }
+    }
+
+    static requireAdmin(ctx, next) {
+        if (!AuthMiddleware.isAdmin(ctx)) {
+            return;
+        }
+        return next();
+    }
 }
 
 module.exports = AuthMiddleware; 

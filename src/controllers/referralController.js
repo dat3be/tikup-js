@@ -1,6 +1,7 @@
 const Affiliate = require('../models/affiliate');
 const Logger = require('../utils/logger');
 const { AFFILIATE_RANKS } = require('../config/constants');
+const MainMenu = require('../keyboards/mainMenu');
 
 class ReferralController {
     static async handleReferral(ctx) {
@@ -11,7 +12,7 @@ class ReferralController {
             // Kiểm tra affiliate hiện tại
             const affiliate = await Affiliate.findByUserId(userId);
             if (affiliate) {
-                const nextRank = this.getNextRank(affiliate);
+                const nextRank = ReferralController.getNextRank(affiliate);
                 const message = `📊 THÔNG TIN GIỚI THIỆU\n\n` +
                     `🏆 Hạng: ${affiliate.rank}\n` +
                     `💰 Tỷ lệ hoa hồng: ${(affiliate.commission_rate * 100).toFixed(1)}%\n` +
@@ -25,6 +26,12 @@ class ReferralController {
                         : `🎉 Chúc mừng! Bạn đã đạt hạng cao nhất`);
                 
                 await ctx.reply(message, { parse_mode: 'HTML' });
+                
+                // Return to main menu
+                await ctx.reply(
+                    '👋 Quay lại menu chính',
+                    MainMenu.getMainMenuKeyboard()
+                );
                 return;
             }
 
@@ -56,6 +63,12 @@ class ReferralController {
                 stack: error.stack
             });
             await ctx.reply('❌ Có lỗi xảy ra. Vui lòng thử lại sau.');
+            
+            // Return to main menu
+            await ctx.reply(
+                '👋 Quay lại menu chính',
+                MainMenu.getMainMenuKeyboard()
+            );
         }
     }
 

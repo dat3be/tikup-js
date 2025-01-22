@@ -34,7 +34,7 @@ module.exports = {
 
     // API Configuration
     API_TOKEN: process.env.API_TOKEN,
-    API_URL: 'https://hacklike17.com/api/v2',
+    API_URL: process.env.API_URL,
 
     // Bank Information
     BANK_INFO: {
@@ -45,12 +45,6 @@ module.exports = {
 
     // Payment Configuration
     CASSO_WEBHOOK_SECRET: process.env.CASSO_WEBHOOK_SECRET,
-
-    // Service Configuration
-    SERVERS: {
-        '1': { name: 'Máy chủ 1 - Nhanh', cost: 250, id: 'server_1' },
-        '2': { name: 'Máy chủ 2 - Chậm', cost: 150, id: 'server_6' }
-    },
 
     // Status Mapping
     STATUS_MAP: {

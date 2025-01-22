@@ -1,53 +1,99 @@
 const pool = require('../config/database');
+const Logger = require('../utils/logger');
 
 class Order {
     static async create(orderData) {
-        const {
-            userId,
-            apiOrderId,
-            serviceType,
-            link,
-            quantity,
-            server,
-            totalCost,
-            status = 'Pending'
-        } = orderData;
+        const query = `
+            INSERT INTO orders (
+                user_id, 
+                api_order_id, 
+                service_name, 
+                link, 
+                quantity, 
+                price_per_unit, 
+                total_price, 
+                status, 
+                note,
+                created_at
+            ) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            RETURNING *
+        `;
 
-        const result = await pool.query(
-            `INSERT INTO orders (
-                user_id, api_order_id, service_type, link, 
-                quantity, server, total_cost, status, 
-                start_count, remains, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-            RETURNING *`,
-            [userId, apiOrderId, serviceType, link, quantity, server, totalCost, status, 0, quantity]
-        );
-        return result.rows[0];
+        try {
+            const values = [
+                orderData.user_id,
+                orderData.api_order_id,
+                orderData.service,
+                orderData.link,
+                orderData.quantity,
+                orderData.price,
+                orderData.total,
+                'pending',
+                orderData.note || 'TikUp Bot'
+            ];
+
+            const result = await pool.query(query, values);
+            Logger.info('Order created:', result.rows[0]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Create order error:', error);
+            throw error;
+        }
     }
 
-    static async findById(orderId, userId) {
-        const result = await pool.query(
-            `SELECT o.*, u.username 
-            FROM orders o 
-            LEFT JOIN users u ON o.user_id = u.user_id 
-            WHERE (o.order_id::TEXT = $1 OR o.api_order_id = $1) 
-            AND o.user_id = $2`,
-            [orderId, userId]
-        );
-        return result.rows[0];
+    static async findByUserId(userId) {
+        const query = `
+            SELECT * FROM orders 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+        `;
+
+        try {
+            const result = await pool.query(query, [userId]);
+            return result.rows;
+        } catch (error) {
+            Logger.error('Find orders error:', error);
+            throw error;
+        }
     }
 
-    static async updateStatus(apiOrderId, statusData) {
-        const result = await pool.query(
-            `UPDATE orders 
-            SET status = $1,
-                start_count = $2,
-                remains = $3
-            WHERE api_order_id = $4
-            RETURNING *`,
-            [statusData.status, statusData.startCount, statusData.remains, apiOrderId]
-        );
-        return result.rows[0];
+    static async findByApiOrderId(apiOrderId) {
+        try {
+            const query = `
+                SELECT o.*, u.user_id as telegram_user_id 
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                WHERE o.api_order_id = $1
+                LIMIT 1
+            `;
+            const result = await pool.query(query, [apiOrderId]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Find order error:', {
+                error: error.message,
+                api_order_id: apiOrderId
+            });
+            throw error;
+        }
+    }
+
+    static async updateStatus(orderId, newStatus) {
+        const query = `
+            UPDATE orders 
+            SET status = $1, updated_at = NOW() 
+            WHERE id = $2 
+            RETURNING *
+        `;
+
+        try {
+            const result = await pool.query(query, [newStatus, orderId]);
+            Logger.info('Order status updated:', result.rows[0]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Update order status error:', error);
+            throw error;
+        }
     }
 
     static async getRecentOrders(userId, limit = 5) {
@@ -68,6 +114,22 @@ class Order {
             WHERE status NOT IN ('Hoàn thành', 'Đã hủy', 'Hoàn tiền')`
         );
         return result.rows;
+    }
+
+    static async findById(orderId) {
+        const query = `
+            SELECT * FROM orders 
+            WHERE id = $1 
+            LIMIT 1
+        `;
+
+        try {
+            const result = await pool.query(query, [orderId]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Find order by ID error:', error);
+            throw error;
+        }
     }
 }
 

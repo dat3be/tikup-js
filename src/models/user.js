@@ -1,33 +1,43 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 const Logger = require('../utils/logger');
 const Affiliate = require('./affiliate');
 
 class User {
-    static async create(user_id, username, referred_by = null) {
+    static async findByUserId(userId) {
         try {
             const query = `
-                INSERT INTO users 
-                (user_id, username, referred_by, rank, balance)
-                VALUES ($1, $2, $3, 'Bronze', 0)
-                ON CONFLICT (user_id) 
-                DO UPDATE SET 
-                    username = EXCLUDED.username,
-                    referred_by = COALESCE(users.referred_by, EXCLUDED.referred_by)
-                RETURNING *
+                SELECT * FROM users 
+                WHERE user_id = $1
+                LIMIT 1
             `;
-            
-            const values = [user_id, username || 'Unknown', referred_by];
-            const result = await db.query(query, values);
-
-            Logger.info('User created/updated:', {
-                user_id,
-                username,
-                referred_by: result.rows[0].referred_by
-            });
-
+            const result = await pool.query(query, [userId]);
             return result.rows[0];
         } catch (error) {
-            Logger.error('Error creating/updating user:', error);
+            Logger.error('Find user error:', {
+                error: error.message,
+                user_id: userId
+            });
+            throw error;
+        }
+    }
+
+    static async create(userId, username) {
+        try {
+            const query = `
+                INSERT INTO users (user_id, username, balance)
+                VALUES ($1, $2, 0)
+                ON CONFLICT (user_id) 
+                DO UPDATE SET username = $2
+                RETURNING *
+            `;
+            const result = await pool.query(query, [userId, username]);
+            return result.rows[0];
+        } catch (error) {
+            Logger.error('Create user error:', {
+                error: error.message,
+                user_id: userId,
+                username
+            });
             throw error;
         }
     }
@@ -37,14 +47,18 @@ class User {
             const query = `
                 UPDATE users 
                 SET balance = balance + $2,
-                    updated_at = CURRENT_TIMESTAMP
+                    updated_at = NOW()
                 WHERE user_id = $1
                 RETURNING *
             `;
-            const result = await db.query(query, [userId, amount]);
+            const result = await pool.query(query, [userId, amount]);
             return result.rows[0];
         } catch (error) {
-            Logger.error('Error updating balance:', error);
+            Logger.error('Update balance error:', {
+                error: error.message,
+                user_id: userId,
+                amount
+            });
             throw error;
         }
     }
@@ -60,7 +74,7 @@ class User {
                 LEFT JOIN users a ON af.user_id = a.user_id
                 WHERE u.user_id = $1
             `;
-            const result = await db.query(query, [user_id]);
+            const result = await pool.query(query, [user_id]);
             return result.rows[0];
         } catch (error) {
             Logger.error('Error finding user:', error);
@@ -98,7 +112,7 @@ class User {
                     r.commission_rate
             `;
             
-            return (await db.query(query, [userId])).rows[0];
+            return (await pool.query(query, [userId])).rows[0];
         } catch (error) {
             Logger.error('Error getting rank info:', error);
             throw error;
@@ -107,11 +121,18 @@ class User {
 
     static async checkBalance(userId) {
         try {
-            const query = 'SELECT balance FROM users WHERE user_id = $1';
-            const result = await db.query(query, [userId]);
+            const query = `
+                SELECT balance FROM users
+                WHERE user_id = $1
+                LIMIT 1
+            `;
+            const result = await pool.query(query, [userId]);
             return result.rows[0]?.balance || 0;
         } catch (error) {
-            Logger.error('Error checking balance:', error);
+            Logger.error('Check balance error:', {
+                error: error.message,
+                user_id: userId
+            });
             throw error;
         }
     }
@@ -128,7 +149,7 @@ class User {
                 FROM users 
                 WHERE referred_by = $1
             `;
-            const referralCount = (await db.query(countQuery, [affiliate.aff_code])).rows[0].count;
+            const referralCount = (await pool.query(countQuery, [affiliate.aff_code])).rows[0].count;
 
             // Get appropriate rank based on count
             const rankQuery = `
@@ -138,11 +159,11 @@ class User {
                 ORDER BY required_referrals DESC
                 LIMIT 1
             `;
-            const newRank = (await db.query(rankQuery, [referralCount])).rows[0];
+            const newRank = (await pool.query(rankQuery, [referralCount])).rows[0];
 
             // Update user's rank
             if (newRank) {
-                await db.query(
+                await pool.query(
                     'UPDATE users SET rank = $1 WHERE user_id = $2',
                     [newRank.name, userId]
                 );
@@ -173,7 +194,7 @@ class User {
                 LEFT JOIN commissions c ON c.user_id = $1
             `;
             
-            const result = await db.query(query, [user_id]);
+            const result = await pool.query(query, [user_id]);
             return result.rows[0];
         } catch (error) {
             Logger.error('Error getting referral info:', error);
@@ -189,7 +210,7 @@ class User {
                 JOIN affiliates a ON u.user_id = a.user_id
                 WHERE a.aff_code = $1
             `;
-            const result = await db.query(query, [aff_code]);
+            const result = await pool.query(query, [aff_code]);
             return result.rows[0];
         } catch (error) {
             Logger.error('Error finding user by aff code:', error);
@@ -209,7 +230,7 @@ class User {
             `;
             
             const values = [data.referred_by, user_id];
-            const result = await db.query(query, values);
+            const result = await pool.query(query, values);
 
             Logger.info('User updated:', {
                 user_id,

@@ -2,21 +2,21 @@ const axios = require('axios');
 const Logger = require('../../utils/logger');
 
 const API_URL = process.env.API_URL;
-const API_V2_URL = process.env.API_URL + 'v2/';
+const API_URL_V2 = process.env.API_URL + 'v2/';
 const API_TOKEN = process.env.API_TOKEN;
 
 class HacklikeApi {
     constructor() {
         this.api = axios.create({
-            baseURL: process.env.API_URL,
+            baseURL: API_URL,
             timeout: 10000,
             headers: {
-                'Authorization': `Bearer ${process.env.API_TOKEN}`
+                'Authorization': `Bearer ${API_TOKEN}`
             }
         });
     }
 
-    static async placeOrder(orderData) {
+    async placeOrder(orderData) {
         try {
             if (!API_URL || !API_TOKEN) {
                 throw new Error('API configuration missing');
@@ -35,7 +35,7 @@ class HacklikeApi {
             formData.append('count', orderData.count);
             formData.append('note', orderData.note || 'TikUp Bot');
 
-            const response = await axios.post(API_URL + 'tiktok/follow_tiktok', formData, {
+            const response = await this.api.post('tiktok/follow_tiktok', formData, {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }

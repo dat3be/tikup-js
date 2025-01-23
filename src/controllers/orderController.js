@@ -19,7 +19,8 @@ class OrderController {
                 Logger.info('Insufficient balance:', { user_id: userId, balance });
                 return ctx.reply(
                     '❌ Số dư không đủ để đặt đơn.\n' +
-                    '💰 Vui lòng nạp tiền để tiếp tục.'
+                    '💰 Vui lòng nạp tiền để tiếp tục.',
+                    MainMenu.getMainMenuKeyboard()
                 );
             }
 
@@ -188,7 +189,8 @@ class OrderController {
             if (balance < totalCost) {
                 return ctx.reply(
                     '❌ Số dư không đủ để đặt đơn này\n' +
-                    `💰 Cần thêm: ${(totalCost - balance).toLocaleString()}đ`
+                    `💰 Cần thêm: ${(totalCost - balance).toLocaleString()}đ`,
+                    MainMenu.getMainMenuKeyboard()
                 );
             }
 
@@ -294,15 +296,23 @@ class OrderController {
 
         } catch (error) {
             Logger.error('Order confirmation error:', {
-                error: error.message,
+                error: error.message || 'Unknown error',
                 user_id: ctx.from.id,
-                data: orderData
+                data: orderData,
+                stack: error.stack || 'No stack trace',
+                raw_error: error // Log toàn bộ object lỗi
             });
-            await ctx.reply(
-                '❌ Có lỗi xảy ra khi đặt đơn. Vui lòng thử lại sau.\n' +
-                'Nếu tiền đã bị trừ, hãy liên hệ Admin để được hỗ trợ.',
-                { reply_markup: { remove_keyboard: true } }
-            );
+
+            let errorMessage = '❌ Có lỗi xảy ra khi đặt đơn:\n';
+            errorMessage += error.message || 'Không xác định được nguyên nhân';
+            errorMessage += '\n\nVui lòng thử lại sau hoặc liên hệ Admin nếu cần hỗ trợ.';
+
+            await ctx.reply(errorMessage, {
+                reply_markup: { remove_keyboard: true }
+            });
+
+            // Xóa cache order để tránh trạng thái không hợp lệ
+            await Cache.del(`order:${ctx.from.id}`);
         }
     }
 

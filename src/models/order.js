@@ -111,7 +111,7 @@ class Order {
         const result = await pool.query(
             `SELECT api_order_id 
             FROM orders 
-            WHERE status NOT IN ('Hoàn thành', 'Đã hủy', 'Hoàn tiền')`
+            WHERE status NOT IN ('completed', 'cancelled', 'refunded')`
         );
         return result.rows;
     }

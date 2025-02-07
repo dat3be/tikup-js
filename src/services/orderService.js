@@ -29,14 +29,14 @@ class OrderService {
 
             // Create local order record
             const order = await Order.create({
-                userId,
-                apiOrderId: apiResponse,
-                serviceType: serverInfo.name,
+                user_id: userId,
+                api_order_id: apiResponse,
+                service: serverInfo.name,
                 link,
                 quantity,
-                server,
-                totalCost,
-                status: 'pending'
+                price: serverInfo.cost,
+                total: totalCost,
+                note: 'TikUp Bot'
             });
 
             // Deduct user balance
@@ -56,7 +56,8 @@ class OrderService {
             for (const order of activeOrders) {
                 try {
                     const statusData = await HacklikeApi.checkOrderStatus(order.api_order_id);
-                    await Order.updateStatus(order.api_order_id, statusData);
+                    const truncatedStatus = String(statusData).substring(0, 254);
+                    await Order.updateStatus(order.api_order_id, truncatedStatus);
                 } catch (error) {
                     console.error(`Error updating order ${order.api_order_id}:`, error);
                     continue;
